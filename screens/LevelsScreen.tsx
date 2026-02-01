@@ -19,7 +19,7 @@ export const LevelsScreen: React.FC<LevelsScreenProps> = ({ onSelectLevel }) => 
             .join(' ');
 
           const soundsPreview = level.letters
-            .map(lid => GREEK_ALPHABET.find(l => l.id === lid)?.soundDescription)
+            .map(lid => GREEK_ALPHABET.find(l => l.id === lid)?.sounds[0].description)
             .filter(Boolean)
             .join(' · ');
 

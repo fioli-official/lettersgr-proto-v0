@@ -1,19 +1,19 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { GREEK_ALPHABET, APP_COLORS } from '../constants';
 import { InterstitialOverlay } from '../components/AdPlaceholder';
-import { RefreshCcw, Volume2, Trophy, Star } from 'lucide-react';
+import { RefreshCcw, Volume2, Star } from 'lucide-react';
 import { audioManager } from '../components/AudioManager';
 
 interface TestScreenProps {
   letterIds: string[];
   onFinish: () => void;
   onStartLevel1: () => void;
+  updateHeaderTitle?: (title: React.ReactNode) => void;
 }
 
 const TOP_SCORE_KEY = 'lettersgr_test_top_score';
 
-export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onStartLevel1 }) => {
+export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onStartLevel1, updateHeaderTitle }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [options, setOptions] = useState<string[]>([]);
@@ -33,16 +33,51 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
 
   const testPool = useMemo(() => {
     if (letterIds.length === 0) return [];
-    const pool = [
-      ...letterIds.map(id => ({ id, type: 'upper' })), 
-      ...letterIds.map(id => ({ id, type: 'lower' }))
-    ];
-    return pool.sort(() => 0.5 - Math.random());
+    
+    const pool: { id: string; type: 'upper' | 'lower' }[] = [];
+    
+    letterIds.forEach(id => {
+      // Requirement: Final Sigma (ς) should only be tested in lowercase
+      if (id !== 'final_sigma') {
+        pool.push({ id, type: 'upper' });
+      }
+      pool.push({ id, type: 'lower' });
+    });
+    
+    // Initial shuffle
+    let shuffled = [...pool].sort(() => 0.5 - Math.random());
+    
+    // Helper to get description (English equivalent)
+    const getDesc = (item: { id: string }) => 
+      GREEK_ALPHABET.find(l => l.id === item.id)?.sounds[0].description;
+
+    // Constraint: Don't show same sound twice in a row
+    for (let i = 1; i < shuffled.length - 1; i++) {
+        const prevDesc = getDesc(shuffled[i-1]);
+        const currDesc = getDesc(shuffled[i]);
+        
+        if (currDesc === prevDesc) {
+            for (let j = i + 1; j < shuffled.length; j++) {
+                if (getDesc(shuffled[j]) !== prevDesc) {
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    break;
+                }
+            }
+        }
+    }
+    return shuffled;
   }, [letterIds]);
   
   const generateOptions = (correctId: string) => {
-    const others = GREEK_ALPHABET.filter(l => l.id !== correctId);
-    const shuffledOthers = [...others].sort(() => 0.5 - Math.random());
+    const correctLetter = GREEK_ALPHABET.find(l => l.id === correctId)!;
+    const correctDesc = correctLetter.sounds[0].description;
+
+    const validOthers = GREEK_ALPHABET.filter(l => 
+      l.id !== correctId && 
+      l.sounds[0].description !== correctDesc
+    );
+    
+    const shuffledOthers = [...validOthers].sort(() => 0.5 - Math.random());
     const distractors = shuffledOthers.slice(0, 5).map(l => l.id);
     return [...distractors, correctId].sort(() => 0.5 - Math.random());
   };
@@ -52,7 +87,7 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
     const letter = GREEK_ALPHABET.find(l => l.id === testPool[idx].id);
     if (letter) {
       setIsPlaying(true);
-      audioManager.play(letter.audioUrl, () => setIsPlaying(false));
+      audioManager.play(letter.sounds[0].audioUrl, () => setIsPlaying(false));
     }
   };
 
@@ -61,8 +96,11 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
       setOptions(generateOptions(testPool[currentQuestionIndex].id));
       setSelectedOption(null);
       setIsCorrect(null);
-      // Audio autoplay removed per requirements
-    } else if (testPool.length > 0) {
+    }
+  }, [currentQuestionIndex, testPool]);
+
+  useEffect(() => {
+    if (testPool.length > 0 && currentQuestionIndex === testPool.length && !isTestComplete) {
       const percentage = Math.round((score / testPool.length) * 100);
       if (topScore === null || percentage > topScore) {
         setIsNewHighScore(true);
@@ -70,7 +108,7 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
       }
       setIsTestComplete(true);
     }
-  }, [currentQuestionIndex, testPool]);
+  }, [currentQuestionIndex, testPool, score, topScore, isTestComplete]);
 
   const handleAnswer = (optionId: string) => {
     if (selectedOption) return;
@@ -85,39 +123,105 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
     }, 1200);
   };
 
+  const getFeedback = (pct: number) => {
+    if (pct < 70) return "That’s it!";
+    if (pct < 85) return "Well done!";
+    if (pct < 100) return "Almost perfect!";
+    return "Τέλειος!";
+  };
+
+  const currentQ = testPool[currentQuestionIndex];
+  const currentLetter = currentQ ? GREEK_ALPHABET.find(l => l.id === currentQ.id) : null;
+
+  useEffect(() => {
+    if (isTestComplete) {
+       updateHeaderTitle?.(""); 
+       return;
+    }
+
+    if (currentLetter) {
+      const titleContent = (
+        <div className="flex items-center justify-center mt-[140px] md:mt-[100px] space-x-4 md:space-x-8">
+          <span 
+            className={`text-[32px] md:text-[54px] font-light leading-[131%] ${isCorrect === false ? 'text-red-500' : APP_COLORS.textMain} transition-colors duration-300`}
+          >
+            {isCorrect === false ? "Not quite" : currentLetter.sounds[0].description}
+          </span>
+          {isCorrect !== false && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); playGreekSound(); }}
+              className={`w-14 h-14 md:w-20 md:h-20 flex items-center justify-center rounded-full transition-all shrink-0 ${isPlaying ? 'bg-[#0096C7] text-white animate-pulse' : 'liquid-glass-dark text-[#002B5B] active:scale-90'}`}
+            >
+              <Volume2 size={32} className="md:w-12 md:h-12" strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+      );
+      updateHeaderTitle?.(titleContent);
+    }
+  }, [currentLetter, isCorrect, isPlaying, isTestComplete, updateHeaderTitle]);
+
   if (isTestComplete) {
     const percentage = Math.round((score / testPool.length) * 100);
+    const feedback = getFeedback(percentage);
     
     return (
-      <div className="fixed inset-0 z-50 flex flex-col overflow-hidden">
+      <div className="fixed inset-0 z-50 flex flex-col overflow-hidden items-center justify-center">
         {showAd && <InterstitialOverlay onClose={() => setShowAd(false)} />}
+        
         <div 
-          className="absolute inset-0 z-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&q=80&w=1400")' }}
-        >
-          <div className="absolute inset-0 bg-[#001A33]/80" />
-        </div>
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-between py-12 px-6 text-center animate-in fade-in slide-in-from-bottom-12 duration-1000">
-          <div className="space-y-6 pt-10">
-            {isNewHighScore && (
-              <div className="inline-flex items-center space-x-2 bg-yellow-400 text-[#002B5B] px-8 py-3 rounded-full font-black text-xl animate-bounce mb-4 shadow-2xl">
-                <Trophy size={24} />
-                <span>NEW TOP SCORE!</span>
-              </div>
-            )}
-            <h2 className="text-[54px] font-black text-white drop-shadow-lg leading-tight text-center">Mastered!</h2>
-            <div className="space-y-1">
-              <p className="text-[32px] font-bold text-[#8EFFDF] leading-snug drop-shadow-md">{percentage}% Accuracy</p>
-              <p className="text-xl font-medium text-white/70">in recognizing pure Greek sounds</p>
+          className="absolute inset-0 bg-cover bg-center -z-20 scale-105"
+          style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&q=80&w=2000")' }}
+        />
+        
+        <div className="absolute inset-0 bg-[#071ba6c7] -z-10" />
+
+        {isNewHighScore && (
+          <div className="absolute top-[calc(var(--sat,0px)+40px)] left-0 right-0 flex items-center justify-center space-x-2 animate-bounce-soft z-10">
+            <Star size={18} className="text-yellow-400 fill-current" />
+            <span className="text-white text-[16px] font-bold tracking-[0.2em] uppercase">NEW HIGH SCORE</span>
+          </div>
+        )}
+
+        <div className="flex flex-col items-center max-sm w-full px-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="mb-10">
+            <img 
+              src="https://raw.githubusercontent.com/fioli-official/lettersgr-proto-v0/401bb94f6ba43d5671c65a74a2ceaf9319ecf8bd/media/laurel-icon-test-end-white.svg" 
+              alt="Laurel Wreath"
+              className="w-32 h-32 animate-glow-pulse"
+            />
+          </div>
+
+          <div className="space-y-4 text-center mb-16">
+            <h2 className="text-[27px] font-light tracking-tight text-white leading-tight">
+              {feedback}
+            </h2>
+            
+            <div className="pt-2">
+              <p className="text-[64px] font-light text-white leading-none tracking-tighter">
+                {percentage}%
+              </p>
+              <p className="text-[27px] font-light text-white opacity-80 mt-5 tracking-tight">
+                Greek letters correct
+              </p>
             </div>
           </div>
-          <div className="w-full flex flex-col items-center space-y-4 pb-4">
+
+          <div className="w-full flex flex-col items-center space-y-10">
             <button
               onClick={onStartLevel1}
-              className="w-full max-w-xs h-20 bg-[#FF69B4] text-white rounded-[40px] text-[30px] font-black shadow-2xl active:scale-95 transition-transform"
+              style={{
+                width: '260px',
+                height: '57px',
+                borderRadius: '37px',
+                fontSize: '27px',
+                fontWeight: '600',
+              }}
+              className="bg-[rgb(0,87,239)] text-white shadow-2xl active:bg-white active:text-[rgb(0,87,239)] active:scale-[0.97] transition-all flex items-center justify-center"
             >
               Start Level 1
             </button>
+            
             <button
               onClick={() => {
                 setShowAd(true);
@@ -128,10 +232,10 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
                   setIsNewHighScore(false);
                 }, 500);
               }}
-              className="w-full max-w-xs h-16 bg-white/10 backdrop-blur-md text-white border-2 border-white/20 rounded-[32px] text-[24px] font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center space-x-3"
+              className="text-[27px] font-light text-white hover:opacity-70 active:scale-95 transition-all tracking-tight flex items-center space-x-3"
             >
-              <RefreshCcw size={28} strokeWidth={3} />
-              <span>Retry</span>
+              <RefreshCcw size={24} strokeWidth={2} />
+              <span>Retry test</span>
             </button>
           </div>
         </div>
@@ -139,61 +243,33 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
     );
   }
 
-  const currentQ = testPool[currentQuestionIndex];
-  const currentLetter = currentQ ? GREEK_ALPHABET.find(l => l.id === currentQ.id) : null;
-
   if (!currentQ || !currentLetter) return null;
 
   return (
-    <div className="py-8 flex flex-col items-center min-h-[75vh] animate-in fade-in duration-500">
-      <div className="w-full flex justify-between items-center mb-6 px-2">
-        <span className="text-xs font-black text-[#0096C7] uppercase tracking-widest bg-[#0096C7]/5 px-4 py-1.5 rounded-full border border-[#0096C7]/10">
-          {currentQuestionIndex + 1} / {testPool.length}
-        </span>
-        {topScore !== null && (
-          <div className="flex items-center space-x-2 text-gray-400 text-xs font-black bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
-            <Star size={12} className="text-yellow-500 fill-yellow-500" />
-            <span>TOP: {topScore}%</span>
-          </div>
-        )}
-      </div>
+    <div className="fixed inset-0 flex flex-col items-center justify-end pb-[109px] md:justify-center md:pb-0 transition-colors duration-500">
+      <div className="absolute inset-0 bg-gradient-to-b from-[#D9FFFF] to-[#C7FFEF] -z-20" />
+      
+      {isCorrect === false && (
+        <div className="absolute inset-0 bg-[#FFF5F5] -z-10 animate-in fade-in duration-300" />
+      )}
 
-      <div className="text-center mb-8 px-4 w-full">
-        <div className="mb-6 space-y-1">
-          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-            Choose the correct letter:
-          </h2>
-          <div className="text-3xl font-black text-[#002B5B]">
-            {currentLetter.soundDescription}
-          </div>
-        </div>
-        
-        <button
-          onClick={() => playGreekSound()}
-          disabled={isPlaying}
-          className={`group relative p-8 rounded-[3rem] transition-all active:scale-90 border-[5px] shadow-xl ${isPlaying ? 'bg-[#0096C7] border-[#0096C7] text-white' : 'bg-white border-[#0096C7] text-[#0096C7]'}`}
-        >
-          <Volume2 size={56} strokeWidth={3} className={isPlaying ? 'animate-pulse' : 'group-hover:scale-105 transition-transform'} />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-5 w-full max-w-sm px-4">
+      <div className="grid grid-cols-2 gap-x-7 gap-y-7 md:gap-x-16 md:gap-y-[4vh] w-full max-w-[200px] md:max-w-[500px] md:h-[65vh] animate-in zoom-in-95 duration-300 content-center">
         {options.map((optionId) => {
           const opt = GREEK_ALPHABET.find(l => l.id === optionId)!;
           const label = currentQ.type === 'upper' ? opt.upper : opt.lower;
           
-          let bgColor = 'bg-white';
-          let borderColor = 'border-gray-100';
-          let textColor = APP_COLORS.textMain;
+          let bgColor = 'bg-white/40';
+          let textColor = '#002B5B';
+          let borderColor = 'border-white/20';
 
           if (selectedOption === optionId) {
             if (isCorrect) {
-              bgColor = 'bg-green-500'; borderColor = 'border-green-600'; textColor = 'text-white';
+              bgColor = 'bg-green-500'; textColor = 'white'; borderColor = 'border-green-600';
             } else {
-              bgColor = 'bg-red-500'; borderColor = 'border-red-600'; textColor = 'text-white';
+              bgColor = 'bg-red-500'; textColor = 'white'; borderColor = 'border-red-600';
             }
           } else if (selectedOption && optionId === currentQ.id) {
-            bgColor = 'bg-green-100'; borderColor = 'border-green-500';
+            bgColor = 'bg-green-100'; borderColor = 'border-green-400';
           }
 
           return (
@@ -201,7 +277,8 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
               key={optionId}
               onClick={() => handleAnswer(optionId)}
               disabled={!!selectedOption}
-              className={`aspect-square flex items-center justify-center text-[42px] font-black rounded-[2rem] border-4 shadow-sm transition-all duration-200 active:scale-90 ${bgColor} ${borderColor} ${textColor}`}
+              style={{ color: textColor }}
+              className={`w-full aspect-square md:aspect-auto md:h-full flex items-center justify-center text-[42px] md:text-[90px] font-light rounded-full md:rounded-[5rem] border-2 md:border-[4px] shadow-sm backdrop-blur-md transition-all duration-300 active:scale-90 ${bgColor} ${borderColor}`}
             >
               {label}
             </button>
@@ -209,8 +286,8 @@ export const TestScreen: React.FC<TestScreenProps> = ({ letterIds, onFinish, onS
         })}
       </div>
       
-      <div className="mt-auto pt-12 text-center w-full px-6">
-        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner border border-gray-200">
+      <div className="absolute bottom-10 left-0 right-0 px-12">
+        <div className="h-1 w-full bg-[#002B5B]/5 rounded-full overflow-hidden">
           <div 
             className="h-full bg-[#0096C7] transition-all duration-700 rounded-full" 
             style={{ width: `${testPool.length > 0 ? ((currentQuestionIndex) / testPool.length) * 100 : 0}%` }}

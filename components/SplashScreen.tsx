@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { APP_COLORS } from '../constants';
 
@@ -22,11 +21,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ isFading = false }) 
 
       {/* App Name and Subtitle - Spacing set to exactly 0 (tracking-normal) */}
       <div className="mt-4 text-center animate-in slide-in-from-bottom-4 duration-1000 delay-300">
-        <h2 className={`text-[30px] font-light tracking-normal ${APP_COLORS.textMain} leading-none`}>
+        <h2 className={`text-[30px] font-normal tracking-normal ${APP_COLORS.textMain} leading-none`}>
           LettersGR
         </h2>
         <p className={`text-[30px] font-light tracking-normal ${APP_COLORS.textMain} mt-1 leading-tight`}>
-          Greek alphabet learning
+          Greek alphabet<br />learning
         </p>
       </div>
 

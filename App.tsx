@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [menuInitialView, setMenuInitialView] = useState<'main' | 'cookies'>('main');
   const [showConsent, setShowConsent] = useState(false);
   const [toast, setToast] = useState<{ message: React.ReactNode; type: 'success' | 'info' } | null>(null);
+  const [testHeaderTitle, setTestHeaderTitle] = useState<React.ReactNode>(null);
 
   // Initial load effect (Splash Screen with Crossfade)
   useEffect(() => {
@@ -58,9 +59,7 @@ const App: React.FC = () => {
   }, [toast]);
 
   const handleConsent = (accepted: boolean, showToast: boolean = false) => {
-    // Unlocking audio on first significant user click
     audioManager.unlock();
-    
     localStorage.setItem(CONSENT_KEY, accepted ? 'all' : 'essential');
     setShowConsent(false);
     
@@ -100,9 +99,7 @@ const App: React.FC = () => {
   };
 
   const navigateTo = useCallback((screen: Screen, params?: Partial<AppState>) => {
-    // Attempt audio unlock on navigation just in case
     audioManager.unlock();
-    
     setState(prev => ({ ...prev, currentScreen: screen, ...params }));
     window.scrollTo(0, 0);
   }, []);
@@ -122,7 +119,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Stable letter IDs for the test to prevent reshuffling on re-renders
   const testLetterIds = useMemo(() => {
     if (state.currentScreen !== Screen.Test) return [];
     return state.selectedLevelId === 'all' 
@@ -199,6 +195,7 @@ const App: React.FC = () => {
             letterIds={testLetterIds} 
             onFinish={() => navigateTo(Screen.Levels)} 
             onStartLevel1={() => navigateTo(Screen.Learning, { selectedLevelId: 'l1', currentLetterIndex: 0 })}
+            updateHeaderTitle={setTestHeaderTitle}
           />
         );
       }
@@ -213,21 +210,20 @@ const App: React.FC = () => {
     if (state.currentScreen === Screen.Levels) return "Groups";
     if (state.currentScreen === Screen.Exercises) return "Practice";
     if (state.currentScreen === Screen.Learning) return LEVELS.find(l => l.id === state.selectedLevelId)?.title;
-    if (state.currentScreen === Screen.Test) return "Test";
+    if (state.currentScreen === Screen.Test) return testHeaderTitle || "Test";
     return "LettersGR";
   };
 
   return (
     <>
       <Layout 
-        title={getTitle()} 
+        title={getTitle() as any} 
         onBack={state.currentScreen !== Screen.Welcome ? goBack : undefined}
         onMenuToggle={() => { setMenuInitialView('main'); setShowMenu(true); }}
       >
         {renderScreen()}
       </Layout>
 
-      {/* Toast Notification */}
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[500] w-[90%] max-w-sm">
           <div className={`flex items-start space-x-3 p-4 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-500 ${toast.type === 'success' ? 'bg-[#002B5B] text-white' : 'bg-white border-2 border-gray-100 text-[#002B5B]'}`}>

@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Play, ChevronLeft, ChevronRight, GraduationCap, Info } from 'lucide-react';
+import { Volume2, ChevronLeft, ChevronRight, GraduationCap, Info } from 'lucide-react';
 import { GREEK_ALPHABET, APP_COLORS } from '../constants';
 import { audioManager } from '../components/AudioManager';
 
@@ -12,20 +11,20 @@ interface LearningScreenProps {
 
 export const LearningScreen: React.FC<LearningScreenProps> = ({ letterIds, initialIndex, onTest }) => {
   const [index, setIndex] = useState(initialIndex);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingId, setPlayingId] = useState<number | null>(null);
   
   const letter = GREEK_ALPHABET.find(l => l.id === letterIds[index])!;
 
   useEffect(() => {
     // Stop audio when changing letters
     audioManager.stop();
-    setIsPlaying(false);
+    setPlayingId(null);
     return () => audioManager.stop();
   }, [index]);
 
-  const playAudio = () => {
-    setIsPlaying(true);
-    audioManager.play(letter.audioUrl, () => setIsPlaying(false));
+  const playSound = (soundUrl: string, soundIndex: number) => {
+    setPlayingId(soundIndex);
+    audioManager.play(soundUrl, () => setPlayingId(null));
   };
 
   const next = () => {
@@ -37,36 +36,55 @@ export const LearningScreen: React.FC<LearningScreenProps> = ({ letterIds, initi
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-between py-2">
-      <div className="text-center w-full mb-4">
-        <span className="text-xs font-black text-[#0096C7] uppercase tracking-widest bg-[#0096C7]/5 px-4 py-1.5 rounded-full border border-[#0096C7]/10">
-          {index + 1} OF {letterIds.length}
-        </span>
-      </div>
+    <div className="flex-1 flex flex-col items-center justify-between pt-16 pb-2">
+      {/* Letter Counter Removed */}
 
-      <div className="flex flex-col items-center space-y-8 w-full animate-in zoom-in-95 duration-300">
-        <div className="flex flex-col items-center">
+      {/* Main Letter Content */}
+      <div className="flex flex-col items-center w-full animate-in zoom-in-95 duration-300">
+        <div className="flex flex-col items-center mb-8">
           <div className="flex items-center justify-center space-x-12 text-[140px] md:text-[180px] font-black tracking-tighter leading-none select-none">
             <span className={APP_COLORS.textMain}>{letter.upper}</span>
             <span className={APP_COLORS.textAccent}>{letter.lower}</span>
           </div>
-          <div className="mt-2 text-xl font-mono text-[#0096C7] font-bold bg-[#0096C7]/5 px-6 py-2 rounded-full border border-[#0096C7]/20">
-            {letter.ipa}
-          </div>
         </div>
 
-        <div className="text-center space-y-2 px-4 max-w-sm">
-          <h3 className="text-3xl font-black tracking-tight text-[#002B5B]">
-            {letter.soundDescription}
-          </h3>
-          
-          <p className="text-gray-500 text-lg font-bold">
-            e.g. in <span className="text-[#002B5B] font-black underline decoration-[#0096C7]">{letter.exampleWord}</span>
-          </p>
+        {/* Description Section */}
+        <div className="w-full max-w-sm px-4 space-y-10 pt-5">
+          {letter.sounds.map((sound, idx) => (
+            <div key={idx} className="flex flex-col items-center text-center">
+              <div className="flex items-center justify-center space-x-4">
+                <div className="flex flex-col items-center">
+                  {sound.label && (
+                    <span className="text-[10px] font-black uppercase text-[#0096C7] tracking-wider mb-1 block">
+                      {sound.label}
+                    </span>
+                  )}
+                  <h3 className="text-2xl font-black tracking-tight text-[#002B5B]">
+                    {sound.description}
+                  </h3>
+                </div>
+                
+                {/* 2x Bigger Volume Icon (32px) in a 56px button */}
+                <button
+                  onClick={() => playSound(sound.audioUrl, idx)}
+                  className={`w-14 h-14 flex items-center justify-center rounded-full transition-all shrink-0 ${playingId === idx ? 'bg-[#0096C7] text-white animate-pulse' : 'liquid-glass-dark text-[#002B5B] active:scale-90'}`}
+                  aria-label={`Play sound for ${sound.description}`}
+                >
+                  <Volume2 size={32} strokeWidth={1.5} />
+                </button>
+              </div>
+              
+              <p className="mt-2 text-gray-500 text-lg font-bold">
+                e.g. in <span className="text-[#002B5B] font-black underline decoration-[#0096C7]">{sound.example}</span>
+              </p>
+            </div>
+          ))}
           
           {letter.pronunciationNote && (
-            <div className="mt-4 p-5 bg-gray-50 rounded-[2.5rem] border border-gray-100 flex items-start space-x-3 text-left shadow-sm">
-              <Info size={18} className="text-[#0096C7] shrink-0 mt-0.5" />
+            <div className="mt-6 p-5 bg-gray-50 rounded-[2.5rem] border border-gray-100 flex items-start space-x-3 text-left shadow-sm">
+              <div className="mt-0.5 shrink-0">
+                <Info size={18} className="text-[#0096C7]" />
+              </div>
               <p className="text-sm text-gray-600 leading-relaxed italic">
                 {letter.pronunciationNote}
               </p>
@@ -75,18 +93,8 @@ export const LearningScreen: React.FC<LearningScreenProps> = ({ letterIds, initi
         </div>
       </div>
 
+      {/* Action and Navigation Footer */}
       <div className="flex flex-col w-full space-y-4 mt-8">
-        <button
-          onClick={playAudio}
-          disabled={isPlaying}
-          className={`flex items-center justify-center space-x-3 w-full py-5 rounded-[2.5rem] border-[3px] border-[#0096C7] font-black text-xl transition-all active:scale-[0.97] ${isPlaying ? 'bg-[#0096C7] text-white shadow-inner' : 'bg-white text-[#0096C7] shadow-md'}`}
-        >
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isPlaying ? 'bg-white/20' : 'bg-[#0096C7]/10'}`}>
-            <Play size={18} fill={isPlaying ? "white" : "#0096C7"} strokeWidth={3} className={isPlaying ? 'animate-pulse' : ''} />
-          </div>
-          <span>{isPlaying ? 'PLAYING...' : 'HEAR PURE SOUND'}</span>
-        </button>
-
         <button
           onClick={onTest}
           className={`flex items-center justify-center space-x-3 w-full py-5 rounded-[2.5rem] ${APP_COLORS.button} text-white font-black text-xl shadow-lg active:scale-[0.97] transition-all`}

@@ -1,12 +1,19 @@
 
+export interface GreekSound {
+  ipa: string;
+  description: string;
+  example: string;
+  audioUrl: string;
+  label?: string; // e.g. "Hard" or "Soft"
+}
+
 export interface GreekLetter {
   id: string;
   name: string;
   upper: string;
   lower: string;
-  soundDescription: string;
-  exampleWord: string;
-  audioUrl: string;
+  sounds: GreekSound[];
+  pronunciationNote?: string;
 }
 
 export interface LevelGroup {

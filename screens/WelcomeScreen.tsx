@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { APP_COLORS } from '../constants';
 
@@ -11,9 +10,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onSkipToL
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-between py-24 px-6 text-center bg-gradient-to-b from-[#B2FEFF] to-[#8EFFDF]">
       
-      {/* Welcome Title: Deep Blue color (#002B5B), Light weight, 44px */}
+      {/* Welcome Title: Deep Blue color (#002B5B), Light weight, updated to 35px and 1.4 line-height */}
       <div className="flex-1 flex flex-col justify-center">
-        <h1 className={`text-[44px] font-light leading-[1.2] tracking-tight ${APP_COLORS.textMain} opacity-90`}>
+        <h1 className={`text-[35px] font-light leading-[1.4] tracking-tight ${APP_COLORS.textMain} opacity-90`}>
           Welcome!<br />
           You can learn the<br />
           Greek alphabet here
@@ -26,6 +25,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onSkipToL
         {/* "Take a test" Button: 
             Default: Blue bg (#007ACC), White text
             Active/Pressed: White bg, Blue text (#007ACC)
+            Font size reduced by 3px (30px -> 27px)
         */}
         <button
           onClick={onStart}
@@ -33,7 +33,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onSkipToL
             width: '260px',
             height: '57px',
             borderRadius: '37px',
-            fontSize: '30px',
+            fontSize: '27px',
             fontWeight: '600',
             lineHeight: '59px',
             display: 'flex',
@@ -48,10 +48,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onSkipToL
           Take a test
         </button>
 
-        {/* "Skip to level 1" Link: Matches Welcome! text color (#002B5B) */}
+        {/* "Skip to level 1" Link: Matches Welcome! text color (#002B5B) 
+            Font size reduced by 3px (30px -> 27px)
+        */}
         <button
           onClick={() => onSkipToLevel('l1')}
-          className={`text-[30px] font-light ${APP_COLORS.textMain} hover:opacity-80 active:scale-95 transition-all tracking-tight`}
+          className={`text-[27px] font-light ${APP_COLORS.textMain} hover:opacity-80 active:scale-95 transition-all tracking-tight`}
         >
           Skip to Level 1
         </button>

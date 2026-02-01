@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,6 +19,8 @@
             overscroll-behavior-y: none;
             background-color: white;
             color: #002B5B;
+            margin: 0;
+            padding: 0;
         }
         .safe-pb { padding-bottom: var(--sab); }
         .safe-pt { padding-top: var(--sat); }
@@ -50,6 +51,78 @@
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
+
+        @keyframes bounce-soft {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        .animate-bounce-soft {
+          animation: bounce-soft 3s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse {
+          0% { 
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3)); 
+            opacity: 0.85; 
+            transform: scale(1);
+          }
+          50% { 
+            filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.7)); 
+            opacity: 1; 
+            transform: scale(1.1);
+          }
+          100% { 
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3)); 
+            opacity: 0.85; 
+            transform: scale(1);
+          }
+        }
+        .animate-glow-pulse {
+          animation: glow-pulse 4s ease-in-out infinite;
+        }
+
+        /* Orientation Blocker Styles */
+        #orientation-blocker {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background-color: #002B5B;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2.5rem;
+            color: white;
+        }
+
+        /* Trigger blocker only on handheld devices/tablets when in landscape */
+        @media screen and (orientation: landscape) and (max-width: 1024px) {
+            #orientation-blocker {
+                display: flex;
+            }
+            #root {
+                display: none;
+            }
+            body {
+                overflow: hidden;
+                background-color: #002B5B;
+            }
+        }
+
+        .rotate-icon {
+            animation: rotate-device 4s ease-in-out infinite;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        @keyframes rotate-device {
+            0% { transform: rotate(0deg); }
+            15% { transform: rotate(0deg); }
+            40% { transform: rotate(90deg); }
+            60% { transform: rotate(90deg); }
+            85% { transform: rotate(0deg); }
+            100% { transform: rotate(0deg); }
+        }
     </style>
     <script type="importmap">
 {
@@ -65,6 +138,18 @@
 </script>
 </head>
 <body class="antialiased">
+    <!-- Orientation Blocker UI -->
+    <div id="orientation-blocker" aria-hidden="true">
+        <div class="rotate-icon mb-10">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                <path d="M12 18h.01" />
+            </svg>
+        </div>
+        <h2 class="text-[32px] font-light leading-tight tracking-tight mb-4">Please rotate your device<br/>or lock screen rotation</h2>
+        <p class="text-white text-[18px] font-light leading-snug">LettersGR is currently<br/>in portrait orientation only.</p>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Navigation, Info, Shield, ArrowLeft, ChevronRight, CheckCircle, AlertTriangle, Settings2 } from 'lucide-react';
 import { LEVELS, GREEK_ALPHABET } from '../constants';
 import { Screen } from '../types';
@@ -18,10 +17,17 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
   initialView = 'main'
 }) => {
   const [view, setView] = useState<'main' | 'cookies'>(initialView);
+  const [isMounted, setIsMounted] = useState(false);
   
   const [isAllAccepted, setIsAllAccepted] = useState(
     localStorage.getItem('lettersgr_consent_given') === 'all'
   );
+
+  useEffect(() => {
+    // Trigger the entrance rotation animation
+    const timer = setTimeout(() => setIsMounted(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
   
   const handleLevelClick = (id: string) => {
     onNavigate(Screen.Learning, { selectedLevelId: id, currentLetterIndex: 0 });
@@ -54,9 +60,10 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
   return (
     <div className="fixed inset-0 z-[400] bg-gradient-to-br from-[#003B73] to-[#001A33] flex flex-col items-center text-white overflow-y-auto animate-in fade-in zoom-in-95 duration-300">
       
-      <header className="w-full px-6 h-28 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {view === 'cookies' && (
+      {/* Header - Pixel-perfect alignment with Layout.tsx and 47px top padding */}
+      <header className="w-full px-6 pt-[47px] h-28 flex items-center justify-between">
+        <div className="flex-none w-14">
+          {view === 'cookies' ? (
             <button 
               onClick={() => setView('main')}
               className="w-14 h-14 flex items-center justify-center rounded-full liquid-glass-overlay active:bg-white/20 transition-all active:scale-90"
@@ -64,8 +71,7 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
             >
               <ArrowLeft size={28} strokeWidth={1.5} />
             </button>
-          )}
-          {view === 'main' && (
+          ) : (
             <div className="w-14 h-14 flex items-center justify-center rounded-full liquid-glass-overlay">
               <Navigation size={28} className="text-white" strokeWidth={1.5} />
             </div>
@@ -76,13 +82,19 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
           {view === 'main' ? 'A to Ψ:' : 'Cookies'}
         </h1>
         
-        <button 
-          onClick={onClose}
-          className="w-14 h-14 flex items-center justify-center rounded-full liquid-glass-overlay active:bg-white/20 transition-all active:scale-90"
-          aria-label="Close menu"
-        >
-          <X size={28} strokeWidth={1.5} />
-        </button>
+        <div className="flex-none w-14">
+          <button 
+            onClick={onClose}
+            className="w-14 h-14 flex items-center justify-center rounded-full liquid-glass-overlay active:bg-white/20 transition-all active:scale-90 group overflow-hidden"
+            aria-label="Close menu"
+          >
+            <X 
+              size={28} 
+              strokeWidth={1.5} 
+              className={`transition-all duration-500 ease-out transform ${isMounted ? 'rotate-0 opacity-100' : 'rotate-90 opacity-0'}`}
+            />
+          </button>
+        </div>
       </header>
 
       {view === 'main' ? (
@@ -117,14 +129,14 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
             
             <button
               onClick={handleExerciseClick}
-              className="mt-[46px] text-[24px] font-medium text-white underline underline-offset-8 decoration-white/30 hover:decoration-white transition-all active:scale-95"
+              className="mt-[30px] text-[24px] font-medium text-white underline underline-offset-8 decoration-white/30 hover:decoration-white transition-all active:scale-95"
             >
               Skill training & Exercises
             </button>
 
             <button
               onClick={() => setView('cookies')}
-              className="mt-[55px] flex items-center space-x-3 text-[24px] font-medium text-white hover:opacity-80 transition-all active:scale-95"
+              className="mt-[39px] flex items-center space-x-3 text-[24px] font-medium text-white hover:opacity-80 transition-all active:scale-95"
             >
               <div className="w-10 h-10 flex items-center justify-center rounded-full liquid-glass-overlay">
                 <Settings2 size={20} strokeWidth={2} />
@@ -136,7 +148,7 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
       ) : (
         <div className="flex-1 w-full flex flex-col items-center py-4 px-8">
           
-          <div className="w-full max-w-sm mb-12 flex flex-col items-center">
+          <div className="w-full max-sm mb-12 flex flex-col items-center">
             <button 
               onClick={toggleConsent}
               className="w-full liquid-glass-overlay rounded-[2.5rem] p-6 flex items-center justify-between shadow-xl active:scale-[0.97] transition-all hover:bg-white/10"
@@ -160,7 +172,7 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
             </button>
           </div>
 
-          <div className="w-full max-w-sm space-y-12">
+          <div className="w-full max-sm space-y-12">
             <button 
               onClick={() => handleConsentChoice(true)}
               disabled={isAllAccepted}
@@ -196,7 +208,7 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({
         </div>
       )}
 
-      <footer className="w-full px-8 pb-16 pt-8 flex flex-col items-center space-y-8 mt-auto text-white">
+      <footer className="w-full px-8 pb-16 pt-[17px] flex flex-col items-center space-y-8 mt-auto text-white">
         <div className="flex items-center space-x-12 text-[24px] font-normal uppercase tracking-normal">
           <button onClick={() => alert("LettersGR: A minimalist Greek alphabet tutor.")} className="flex items-center hover:text-white/70 transition-colors">
             <Info size={24} className="mr-2" strokeWidth={1.5} /> About
